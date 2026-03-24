@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 public class AuthController {
+    String token = "";
 
     /**
      * Valida les credencials de l'usuari i genera un token d'accés.
@@ -20,6 +21,7 @@ public class AuthController {
     public LoginResponse loginMock(@RequestBody LoginRequest request) {
 
         if ("admin".equals(request.getUsername()) && "1234".equals(request.getPassword())) {
+            token = "fake-jwt-token-999";
             return new LoginResponse(true, "Login exitoso", "fake-jwt-token-999");
         } else {
             return new LoginResponse(false, "Usuario o contraseña incorrectos", null);
@@ -33,8 +35,8 @@ public class AuthController {
      */
     @PostMapping("/api/logout")
     public LogoutResponse logoutMock(@RequestBody LogoutRequest request) {
-
-        if ("fake-jwt-token-999".equals(request.getToken())) {
+        if (token.equals(request.getToken())) {
+            token = "";
             return new LogoutResponse(true, "Sesión cerrada correctamente.");
         } else {
             return new LogoutResponse(false, "Error: Token inválido o sesión ya cerrada.");
