@@ -30,7 +30,8 @@ public class UsuariController {
         
         boolean isAuthenticated = auth != null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser");
         
-        // s'adjudica administrador al primer usuari enregistrat.
+        // s'adjudica administrador al primer usuari enregistrat. 
+        // si l'usuari no es administrador el rol ha de ser client
         if (usuariRepository.count() == 0) {
             dto.setRol("admin");
         } else if (isAuthenticated) {
