@@ -46,7 +46,7 @@ public class UsuariController {
         Usuari usuari = new Usuari();
         usuari.setNom(dto.getNom());
         usuari.setEmail(dto.getEmail());
-        usuari.setContrasenya(dto.getContrasenya() != null ? dto.getContrasenya() : dto.getEmail());
+        usuari.setPassword(dto.getPassword() != null ? dto.getPassword() : dto.getEmail());
         usuari.setRol(dto.getRol());
         
         if ("client".equals(usuari.getRol())) {
@@ -60,12 +60,16 @@ public class UsuariController {
 
     // READ ALL
     @GetMapping
-    public ResponseEntity<List<UsuariDTO>> getAll() {
-        List<UsuariDTO> usuaris = usuariRepository.findAll()
-                .stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(usuaris);
+    public ResponseEntity<List<UsuariDTO>> getAll(org.springframework.security.core.Authentication auth) {
+      boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"));
+      if (!isAdmin) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+      }
+      List<UsuariDTO> usuaris = usuariRepository.findAll()
+          .stream()
+          .map(this::toDTO)
+          .collect(Collectors.toList());
+      return ResponseEntity.ok(usuaris);
     }
 
     // READ BY ID

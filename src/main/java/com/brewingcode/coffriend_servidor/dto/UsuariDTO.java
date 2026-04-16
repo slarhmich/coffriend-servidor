@@ -8,7 +8,7 @@ public class UsuariDTO {
     private Integer nivell;
     private Integer punts;
     private Integer idBotiga;
-    private String contrasenya;
+    private String password;
 
     public UsuariDTO() {}
     
@@ -43,6 +43,6 @@ public class UsuariDTO {
     public Integer getIdBotiga() { return idBotiga; }
     public void setIdBotiga(Integer idBotiga) { this.idBotiga = idBotiga; }
     
-    public String getContrasenya() { return contrasenya; }
-    public void setContrasenya(String contrasenya) { this.contrasenya = contrasenya; }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 }

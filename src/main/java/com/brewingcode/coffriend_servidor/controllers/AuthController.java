@@ -24,7 +24,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<com.brewingcode.coffriend_servidor.dto.AuthResponseDTO> login(@RequestBody LoginDTO dto) {
         return usuariRepository.findByEmail(dto.getEmail())
-                .filter(usuari -> usuari.getContrasenya().equals(dto.getContrasenya()))
+                .filter(usuari -> usuari.getPassword().equals(dto.getPassword()))
                 .map(usuari -> {
                     UsuariDTO userDto = new UsuariDTO(usuari.getId(), usuari.getNom(), usuari.getEmail(), 
                             usuari.getRol(), usuari.getNivell(), usuari.getPunts(), 
