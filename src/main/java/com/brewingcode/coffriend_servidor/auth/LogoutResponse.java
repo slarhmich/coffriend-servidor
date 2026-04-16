@@ -7,6 +7,9 @@ public class LogoutResponse {
     private boolean success;
     private String message;
 
+    public LogoutResponse() {
+    }
+
     /**
      * Constructor per a la resposta de tancament de sessió.
      * @param success Indica si la sessió s'ha tancat correctament.

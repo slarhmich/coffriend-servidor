@@ -7,6 +7,17 @@ package com.brewingcode.coffriend_servidor.auth;
 public class LogoutRequest {
     private String token;
 
+    public LogoutRequest() {
+    }
+
+    /**
+     * Constructor con token
+     * @param token El token actiu de l'usuari
+     */
+    public LogoutRequest(String token) {
+        this.token = token;
+    }
+
     /** @return El token que s'enviarà per tancar la sessió. */
     public String getToken() {
         return token;
