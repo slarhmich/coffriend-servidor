@@ -30,8 +30,8 @@ public class UsuariController {
         
         boolean isAuthenticated = auth != null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser");
         
+        // s'adjudica administrador al primer usuari enregistrat.
         if (usuariRepository.count() == 0) {
-            // First User Claim: If database is completely empty, make the first user an admin.
             dto.setRol("admin");
         } else if (isAuthenticated) {
             boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"));
@@ -83,19 +83,17 @@ public class UsuariController {
             boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"));
             Integer callerId = (Integer) auth.getPrincipal();
             
-            if (isAdmin) {
-                if (!usuari.getId().equals(callerId) && "client".equals(usuari.getRol())) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).<UsuariDTO>build();
-                }
-            } else {
-                if (!usuari.getId().equals(callerId)) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).<UsuariDTO>build();
-                }
+            // si no es admin canviar dades limitat al compte propi
+            if (!isAdmin) {
+              if (!usuari.getId().equals(callerId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).<UsuariDTO>build();
+              }
             }
 
             usuari.setNom(dto.getNom());
             usuari.setEmail(dto.getEmail());
-            usuari.setRol(dto.getRol());
+
+            if (isAdmin) usuari.setRol(dto.getRol());
             
             if ("client".equals(usuari.getRol())) {
                 usuari.setNivell(dto.getNivell());
