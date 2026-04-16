@@ -1,5 +1,7 @@
 package com.brewingcode.coffriend_servidor.controllers;
 
+import com.brewingcode.coffriend_servidor.auth.LogoutRequest;
+import com.brewingcode.coffriend_servidor.auth.LogoutResponse;
 import com.brewingcode.coffriend_servidor.dto.LoginDTO;
 import com.brewingcode.coffriend_servidor.dto.UsuariDTO;
 import com.brewingcode.coffriend_servidor.repositories.UsuariRepository;
@@ -37,7 +39,19 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
-        return ResponseEntity.ok().build();
+    public ResponseEntity<LogoutResponse> logout(@RequestBody LogoutRequest logoutRequest) {
+        try {
+            if (logoutRequest.getToken() == null || logoutRequest.getToken().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(new LogoutResponse(false, "Token is required for logout"));
+            }
+
+            jwtService.invalidateToken(logoutRequest.getToken());
+
+            return ResponseEntity.ok(new LogoutResponse(true, "Logout successful"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new LogoutResponse(false, "Error during logout: " + e.getMessage()));
+        }
     }
 }

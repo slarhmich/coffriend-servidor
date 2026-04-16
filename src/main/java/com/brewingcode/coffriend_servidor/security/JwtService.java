@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
@@ -17,6 +18,9 @@ public class JwtService {
 
     private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
     private static final long JWT_EXPIRATION = 1000 * 60 * 60 * 24; // 24 hours
+
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
 
     public String generateToken(Integer userId, String role) {
         Map<String, Object> claims = new HashMap<>();
@@ -36,6 +40,9 @@ public class JwtService {
 
     public Boolean validateToken(String token) {
         try {
+            if (tokenBlacklistService.isTokenBlacklisted(token)) {
+                return false;
+            }
             extractAllClaims(token);
             return !isTokenExpired(token);
         } catch (Exception e) {
@@ -71,5 +78,9 @@ public class JwtService {
 
     private Boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
+    }
+
+    public void invalidateToken(String token) {
+        tokenBlacklistService.blacklistToken(token);
     }
 }
