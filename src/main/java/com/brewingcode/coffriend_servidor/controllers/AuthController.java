@@ -23,10 +23,13 @@ public class AuthController {
     @Autowired
     private com.brewingcode.coffriend_servidor.security.JwtService jwtService;
 
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     @PostMapping("/login")
     public ResponseEntity<com.brewingcode.coffriend_servidor.dto.AuthResponseDTO> login(@RequestBody LoginDTO dto) {
         return usuariRepository.findByEmail(dto.getEmail())
-                .filter(usuari -> usuari.getPassword().equals(dto.getPassword()))
+                .filter(usuari -> passwordEncoder.matches(dto.getPassword(), usuari.getPassword()))
                 .map(usuari -> {
                     UsuariDTO userDto = new UsuariDTO(usuari.getId(), usuari.getNom(), usuari.getEmail(), 
                             usuari.getRol(), usuari.getNivell(), usuari.getPunts(), 

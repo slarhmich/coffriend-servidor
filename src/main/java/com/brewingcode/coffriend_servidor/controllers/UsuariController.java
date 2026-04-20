@@ -11,6 +11,7 @@ import com.brewingcode.coffriend_servidor.security.RoleEnum;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,6 +32,9 @@ public class UsuariController {
 
     @Autowired
     private AuthorizationService authorizationService;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     // CREATE
     @PostMapping
@@ -57,7 +61,7 @@ public class UsuariController {
         Usuari usuari = new Usuari();
         usuari.setNom(dto.getNom());
         usuari.setEmail(dto.getEmail());
-        usuari.setPassword(dto.getPassword() != null ? dto.getPassword() : dto.getEmail());
+        usuari.setPassword(passwordEncoder.encode(dto.getPassword() != null ? dto.getPassword() : dto.getEmail()));
         usuari.setRol(dto.getRol());
         
         if (RoleEnum.CLIENT.getDbValue().equals(usuari.getRol())) {

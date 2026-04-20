@@ -110,16 +110,18 @@ public class DemoDataService {
     }
 
     private Usuari createUsuari(String nom, String email, String password, String rol, Botiga botiga) {
-        Usuari usuari = new Usuari();
-        usuari.setNom(nom);
-        usuari.setEmail(email);
-        usuari.setPassword(passwordEncoder.encode(password));
-        usuari.setRol(rol);
-        usuari.setBotiga(botiga);
-        usuari.setNivell(1);
-        usuari.setPunts(0);
-        usuari.setIsDemo(true);
-        return usuariRepository.save(usuari);
+        return usuariRepository.findByEmail(email).orElseGet(() -> {
+            Usuari usuari = new Usuari();
+            usuari.setNom(nom);
+            usuari.setEmail(email);
+            usuari.setPassword(passwordEncoder.encode(password));
+            usuari.setRol(rol);
+            usuari.setBotiga(botiga);
+            usuari.setNivell(1);
+            usuari.setPunts(0);
+            usuari.setIsDemo(true);
+            return usuariRepository.save(usuari);
+        });
     }
 
     private void assignBadgeToUser(Usuari usuari, Insignia insignia) {
