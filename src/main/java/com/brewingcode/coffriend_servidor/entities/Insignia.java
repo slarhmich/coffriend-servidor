@@ -25,6 +25,9 @@ public class Insignia {
     
     @OneToMany(mappedBy = "insignia", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<BadgeTrigger> triggers;
+
+    @OneToMany(mappedBy = "insignia", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<UsuariInsignia> usuariInsignies;
     
     // getters i setters
     public Integer getId() { return id; }
@@ -44,4 +47,7 @@ public class Insignia {
     
     public List<BadgeTrigger> getTriggers() { return triggers; }
     public void setTriggers(List<BadgeTrigger> triggers) { this.triggers = triggers; }
+
+    public List<UsuariInsignia> getUsuariInsignies() { return usuariInsignies; }
+    public void setUsuariInsignies(List<UsuariInsignia> usuariInsignies) { this.usuariInsignies = usuariInsignies; }
 }
