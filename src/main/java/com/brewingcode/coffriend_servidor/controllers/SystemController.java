@@ -2,6 +2,7 @@ package com.brewingcode.coffriend_servidor.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import com.brewingcode.coffriend_servidor.service.DemoDataService;
 import com.brewingcode.coffriend_servidor.service.DataCleanupService;
@@ -19,6 +20,7 @@ public class SystemController {
     @Autowired private DataCleanupService demoDataCleanupService;
 
     // delete all demo data
+    @PreAuthorize("hasRole('admin')")
     @DeleteMapping("/resetDemo")
     public ResponseEntity<String> resetDemoData() {
         try {
@@ -30,6 +32,7 @@ public class SystemController {
     }
 
     // delete all data
+    @PreAuthorize("hasRole('admin')")
     @DeleteMapping("/resetAll")
     public ResponseEntity<String> resetAllDatabase() {
         try {
@@ -41,6 +44,7 @@ public class SystemController {
     }
 
     // generate demo data
+    @PreAuthorize("hasRole('admin')")
     @PostMapping("/seed")
     public ResponseEntity<String> seedDemoData() {
         try {

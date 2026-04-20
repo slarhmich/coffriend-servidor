@@ -4,7 +4,6 @@ import com.brewingcode.coffriend_servidor.entities.*;
 import com.brewingcode.coffriend_servidor.repositories.*;
 import com.brewingcode.coffriend_servidor.security.RoleEnum;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
@@ -12,7 +11,6 @@ import java.time.LocalDate;
 
 /** Adds  demo data */
 @Service
-@PreAuthorize("hasRole('admin')")
 public class DemoDataService {
     @Autowired private BotigaRepository botigaRepository;
     @Autowired private ProducteRepository producteRepository;

@@ -25,7 +25,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/login", "/api/auth/logout", "/error", "/api/system/**").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/logout", "/error").permitAll()
                 // Let GET /api/productes be public
                 .requestMatchers(HttpMethod.GET, "/api/productes/**").permitAll()
                 // Let GET /api/botigues be public
