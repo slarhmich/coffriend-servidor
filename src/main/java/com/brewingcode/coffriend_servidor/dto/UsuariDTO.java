@@ -1,5 +1,6 @@
 package com.brewingcode.coffriend_servidor.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
 
 public class UsuariDTO {
@@ -46,6 +47,7 @@ public class UsuariDTO {
     public Integer getIdBotiga() { return idBotiga; }
     public void setIdBotiga(Integer idBotiga) { this.idBotiga = idBotiga; }
     
+    @JsonIgnore
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
 
