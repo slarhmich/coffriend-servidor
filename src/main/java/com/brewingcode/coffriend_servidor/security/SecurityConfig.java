@@ -13,7 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableMethodSecurity(prePostEnabled = true) // Allows @PreAuthorize
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     @Autowired
@@ -22,12 +22,18 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // Disable CSRF as we use JWT
+            .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/login", "/api/auth/logout", "/error", "/api/system/**").permitAll()
                 // Let GET /api/productes be public
                 .requestMatchers(HttpMethod.GET, "/api/productes/**").permitAll()
+                // Let GET /api/botigues be public
+                .requestMatchers(HttpMethod.GET, "/api/botigues/**").permitAll()
+                // Let GET /api/insignies be public
+                .requestMatchers(HttpMethod.GET, "/api/insignies/**").permitAll()
+                // Let GET /api/gamificacion/levels be public
+                .requestMatchers(HttpMethod.GET, "/api/gamificacion/levels").permitAll()
                 // Let register be public
                 .requestMatchers(HttpMethod.POST, "/api/usuaris").permitAll()
                 // Require auth for everything else
