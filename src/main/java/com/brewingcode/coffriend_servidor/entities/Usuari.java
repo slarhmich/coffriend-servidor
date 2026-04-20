@@ -29,6 +29,9 @@ public class Usuari {
     @Column
     private Integer punts;
     
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
+    private Boolean isDemo = false;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_botiga")
     private Botiga botiga;
@@ -63,6 +66,9 @@ public class Usuari {
     
     public Botiga getBotiga() { return botiga; }
     public void setBotiga(Botiga botiga) { this.botiga = botiga; }
+    
+    public Boolean getIsDemo() { return isDemo; }
+    public void setIsDemo(Boolean isDemo) { this.isDemo = isDemo; }
     
     public List<Comanda> getComandes() { return comandes; }
     public void setComandes(List<Comanda> comandes) { this.comandes = comandes; }

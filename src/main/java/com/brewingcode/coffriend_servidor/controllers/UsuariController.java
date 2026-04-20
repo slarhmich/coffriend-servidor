@@ -1,8 +1,13 @@
 package com.brewingcode.coffriend_servidor.controllers;
 
+import com.brewingcode.coffriend_servidor.dto.EarnedInsigniaDTO;
 import com.brewingcode.coffriend_servidor.dto.UsuariDTO;
+import com.brewingcode.coffriend_servidor.dto.UsuariPublicDTO;
 import com.brewingcode.coffriend_servidor.entities.Usuari;
+import com.brewingcode.coffriend_servidor.repositories.UsuariInsigniaRepository;
 import com.brewingcode.coffriend_servidor.repositories.UsuariRepository;
+import com.brewingcode.coffriend_servidor.security.AuthorizationService;
+import com.brewingcode.coffriend_servidor.security.RoleEnum;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +26,12 @@ public class UsuariController {
     @Autowired
     private UsuariRepository usuariRepository;
 
+    @Autowired
+    private UsuariInsigniaRepository usuariInsigniaRepository;
+
+    @Autowired
+    private AuthorizationService authorizationService;
+
     // CREATE
     @PostMapping
     public ResponseEntity<UsuariDTO> create(@RequestBody UsuariDTO dto, org.springframework.security.core.Authentication auth) {
@@ -28,20 +39,19 @@ public class UsuariController {
             return ResponseEntity.badRequest().build();
         }
         
-        boolean isAuthenticated = auth != null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser");
+        boolean isAuthenticated = authorizationService.isAuthenticated(auth);
         
         // s'adjudica administrador al primer usuari enregistrat. 
         // si l'usuari no es administrador el rol ha de ser client
         if (usuariRepository.count() == 0) {
-            dto.setRol("admin");
+            dto.setRol(RoleEnum.ADMIN.getDbValue());
         } else if (isAuthenticated) {
-            boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"));
-            if (!isAdmin) {
+            if (!authorizationService.hasRole(auth, RoleEnum.ADMIN)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
-            dto.setRol(dto.getRol() != null ? dto.getRol() : "client");
+            dto.setRol(dto.getRol() != null ? dto.getRol() : RoleEnum.CLIENT.getDbValue());
         } else {
-            dto.setRol("client");
+            dto.setRol(RoleEnum.CLIENT.getDbValue());
         }
 
         Usuari usuari = new Usuari();
@@ -50,7 +60,7 @@ public class UsuariController {
         usuari.setPassword(dto.getPassword() != null ? dto.getPassword() : dto.getEmail());
         usuari.setRol(dto.getRol());
         
-        if ("client".equals(usuari.getRol())) {
+        if (RoleEnum.CLIENT.getDbValue().equals(usuari.getRol())) {
             usuari.setNivell(dto.getNivell() != null ? dto.getNivell() : 1);
             usuari.setPunts(dto.getPunts() != null ? dto.getPunts() : 0);
         }
@@ -62,8 +72,7 @@ public class UsuariController {
     // READ ALL
     @GetMapping
     public ResponseEntity<List<UsuariDTO>> getAll(org.springframework.security.core.Authentication auth) {
-      boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"));
-      if (!isAdmin) {
+      if (!authorizationService.hasRole(auth, RoleEnum.ADMIN)) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
       }
       List<UsuariDTO> usuaris = usuariRepository.findAll()
@@ -74,33 +83,45 @@ public class UsuariController {
     }
 
     // READ BY ID
+    // - ADMIN: full profile of any user
+    // - STAFF: public view of any user
+    // - CLIENT/self: full own profile
+    // - Anyone else: 403
     @GetMapping("/{id}")
-    public ResponseEntity<UsuariDTO> getById(@PathVariable Integer id) {
-        return usuariRepository.findById(id)
-                .map(u -> ResponseEntity.ok(toDTO(u)))
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> getById(@PathVariable Integer id, org.springframework.security.core.Authentication auth) {
+        if (!authorizationService.isAuthenticated(auth)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        return usuariRepository.findById(id).map(u -> {
+            if (authorizationService.hasRole(auth, RoleEnum.ADMIN)) {
+                return (ResponseEntity<?>) ResponseEntity.ok(toDTO(u));
+            }
+            if (authorizationService.hasRole(auth, RoleEnum.STAFF)) {
+                return (ResponseEntity<?>) ResponseEntity.ok(toPublicDTO(u));
+            }
+            if (authorizationService.canManageUser(auth, id)) {
+                return (ResponseEntity<?>) ResponseEntity.ok(toDTO(u));
+            }
+            return (ResponseEntity<?>) ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     // UPDATE
     @PutMapping("/{id}")
     public ResponseEntity<UsuariDTO> update(@PathVariable Integer id, @RequestBody UsuariDTO dto, org.springframework.security.core.Authentication auth) {
         return usuariRepository.findById(id).map(usuari -> {
-            boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"));
-            Integer callerId = (Integer) auth.getPrincipal();
-            
-            // si no es admin canviar dades limitat al compte propi
-            if (!isAdmin) {
-              if (!usuari.getId().equals(callerId)) {
+            if (!authorizationService.canManageUser(auth, id)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).<UsuariDTO>build();
-              }
             }
 
             usuari.setNom(dto.getNom());
             usuari.setEmail(dto.getEmail());
 
-            if (isAdmin) usuari.setRol(dto.getRol());
+            if (authorizationService.hasRole(auth, RoleEnum.ADMIN)) {
+                usuari.setRol(dto.getRol());
+            }
             
-            if ("client".equals(usuari.getRol())) {
+            if (RoleEnum.CLIENT.getDbValue().equals(usuari.getRol())) {
                 usuari.setNivell(dto.getNivell());
                 usuari.setPunts(dto.getPunts());
             }
@@ -114,18 +135,16 @@ public class UsuariController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id, org.springframework.security.core.Authentication auth) {
         return usuariRepository.findById(id).map(usuari -> {
-            boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_admin"));
-            boolean isClient = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_client"));
-            Integer callerId = (Integer) auth.getPrincipal();
+            boolean isAdmin = authorizationService.hasRole(auth, RoleEnum.ADMIN);
+            boolean isClient = authorizationService.hasRole(auth, RoleEnum.CLIENT);
 
+            // only admin can delete
             if (isAdmin) {
-                 // Admin can delete
             } else if (isClient) {
-                 if (!usuari.getId().equals(callerId)) {
+                 if (!authorizationService.canManageUser(auth, id)) {
                      return ResponseEntity.status(HttpStatus.FORBIDDEN).<Void>build();
                  }
             } else {
-                 // Worker cannot delete
                  return ResponseEntity.status(HttpStatus.FORBIDDEN).<Void>build();
             }
 
@@ -135,7 +154,27 @@ public class UsuariController {
     }
 
     private UsuariDTO toDTO(Usuari u) {
-        return new UsuariDTO(u.getId(), u.getNom(), u.getEmail(), u.getRol(), 
+        UsuariDTO dto = new UsuariDTO(u.getId(), u.getNom(), u.getEmail(), u.getRol(),
                 u.getNivell(), u.getPunts(), u.getBotiga() != null ? u.getBotiga().getId() : null);
+        dto.setInsignies(buildInsignies(u.getId()));
+        return dto;
+    }
+
+    private UsuariPublicDTO toPublicDTO(Usuari u) {
+        UsuariPublicDTO dto = new UsuariPublicDTO(u.getId(), u.getNom(), u.getNivell(), u.getPunts());
+        dto.setInsignies(buildInsignies(u.getId()));
+        return dto;
+    }
+
+    private List<EarnedInsigniaDTO> buildInsignies(Integer usuariId) {
+        return usuariInsigniaRepository.findByUsuariId(usuariId)
+                .stream()
+                .map(ui -> new EarnedInsigniaDTO(
+                        ui.getInsignia().getId(),
+                        ui.getInsignia().getNom(),
+                        ui.getInsignia().getDescripcio(),
+                        ui.getInsignia().getImatgeUrl(),
+                        ui.getDataObtencio()))
+                .collect(Collectors.toList());
     }
 }
