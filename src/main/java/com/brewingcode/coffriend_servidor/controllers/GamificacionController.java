@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -32,7 +33,7 @@ public class GamificacionController {
     @Autowired
     private UsuariInsigniaRepository usuariInsigniaRepository;
 
-    // GET LEVELS
+    // get levels and tresholds
     @GetMapping("/levels")
     public ResponseEntity<List<NivelDTO>> getLevels() {
         List<NivelDTO> levels = List.of(
@@ -45,7 +46,8 @@ public class GamificacionController {
         return ResponseEntity.ok(levels);
     }
 
-    // ASSIGN BADGE TO USER (ADMIN) - using query parameters
+    // assign badge to user (manual)
+    @PreAuthorize("hasRole('admin')")
     @PostMapping("/assignBadge")
     public ResponseEntity<UsuariInsignia> assignBadge(@RequestParam Integer usuariId, @RequestParam Integer insigniaId) {
         return usuariRepository.findById(usuariId).map(usuari ->
@@ -61,7 +63,8 @@ public class GamificacionController {
         ).orElse(ResponseEntity.notFound().build());
     }
 
-    // UPDATE LEVEL AND POINTS (ADMIN)
+    // update level and points (manual)
+    @PreAuthorize("hasRole('admin')")
     @PutMapping("/updateLevelAndPoints/{idUsuari}")
     public ResponseEntity<Usuari> updateLevelAndPoints(@PathVariable Integer idUsuari, @RequestBody NivelDTO nivelDTO) {
         return usuariRepository.findById(idUsuari).map(usuari -> {

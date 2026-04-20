@@ -46,7 +46,8 @@ public class InsigniaController {
     public ResponseEntity<InsigniaDTO> create(@RequestBody InsigniaDTO dto) {
         Insignia insignia = new Insignia();
         insignia.setNom(dto.getNom());
-        insignia.setCriteri(dto.getCriteri());
+        insignia.setDescripcio(dto.getDescripcio());
+        insignia.setImatgeUrl(dto.getImatgeUrl());
         
         Insignia saved = insigniaRepository.save(insignia);
         return ResponseEntity.status(HttpStatus.CREATED).body(toDTO(saved));
@@ -58,7 +59,8 @@ public class InsigniaController {
     public ResponseEntity<InsigniaDTO> update(@PathVariable Integer id, @RequestBody InsigniaDTO dto) {
         return insigniaRepository.findById(id).map(insignia -> {
             insignia.setNom(dto.getNom());
-            insignia.setCriteri(dto.getCriteri());
+            insignia.setDescripcio(dto.getDescripcio());
+            insignia.setImatgeUrl(dto.getImatgeUrl());
             
             Insignia updated = insigniaRepository.save(insignia);
             return ResponseEntity.ok(toDTO(updated));
@@ -77,6 +79,6 @@ public class InsigniaController {
     }
 
     private InsigniaDTO toDTO(Insignia i) {
-        return new InsigniaDTO(i.getId(), i.getNom(), i.getCriteri());
+        return new InsigniaDTO(i.getId(), i.getNom(), i.getDescripcio(), i.getImatgeUrl());
     }
 }
