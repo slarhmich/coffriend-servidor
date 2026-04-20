@@ -1,6 +1,7 @@
 package com.brewingcode.coffriend_servidor.controllers;
 
 import com.brewingcode.coffriend_servidor.dto.NivelDTO;
+import com.brewingcode.coffriend_servidor.dto.UsuariDTO;
 import com.brewingcode.coffriend_servidor.entities.UsuariInsignia;
 import com.brewingcode.coffriend_servidor.entities.Usuari;
 import com.brewingcode.coffriend_servidor.repositories.UsuariInsigniaRepository;
@@ -66,7 +67,7 @@ public class GamificacionController {
     // update level and points (manual)
     @PreAuthorize("hasRole('admin')")
     @PutMapping("/updateLevelAndPoints/{idUsuari}")
-    public ResponseEntity<Usuari> updateLevelAndPoints(@PathVariable Integer idUsuari, @RequestBody NivelDTO nivelDTO) {
+    public ResponseEntity<UsuariDTO> updateLevelAndPoints(@PathVariable Integer idUsuari, @RequestBody NivelDTO nivelDTO) {
         return usuariRepository.findById(idUsuari).map(usuari -> {
             if ("client".equals(usuari.getRol())) {
                 usuari.setNivell(nivelDTO.getNivell());
@@ -74,7 +75,10 @@ public class GamificacionController {
             }
             
             Usuari updated = usuariRepository.save(usuari);
-            return ResponseEntity.ok(updated);
+            UsuariDTO dto = new UsuariDTO(updated.getId(), updated.getNom(), updated.getEmail(),
+                    updated.getRol(), updated.getNivell(), updated.getPunts(),
+                    updated.getBotiga() != null ? updated.getBotiga().getId() : null);
+            return ResponseEntity.ok(dto);
         }).orElse(ResponseEntity.notFound().build());
     }
 }
