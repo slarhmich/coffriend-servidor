@@ -20,6 +20,12 @@ public class Botiga {
     @Column
     private String horari;
     
+    @Column
+    private String imatgeURL;
+    
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
+    private Boolean isDemo = false;
+    
     @OneToMany(mappedBy = "botiga", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Producte> productes;
     
@@ -41,6 +47,12 @@ public class Botiga {
     
     public String getHorari() { return horari; }
     public void setHorari(String horari) { this.horari = horari; }
+    
+    public String getImatgeURL() { return imatgeURL; }
+    public void setImatgeURL(String imatge) { this.imatgeURL = imatge; }
+    
+    public Boolean getIsDemo() { return isDemo; }
+    public void setIsDemo(Boolean isDemo) { this.isDemo = isDemo; }
     
     public List<Producte> getProductes() { return productes; }
     public void setProductes(List<Producte> productes) { this.productes = productes; }

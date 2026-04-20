@@ -21,6 +21,9 @@ public class Producte {
     @Column(nullable = false)
     private String categoria;
     
+    @Column
+    private String imatgeURL;
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_botiga", nullable = false)
     private Botiga botiga;
@@ -40,6 +43,9 @@ public class Producte {
     
     public String getCategoria() { return categoria; }
     public void setCategoria(String categoria) { this.categoria = categoria; }
+    
+    public String getImatgeURL() { return imatgeURL; }
+    public void setImatgeURL(String imatge) { this.imatgeURL = imatge; }
     
     public Botiga getBotiga() { return botiga; }
     public void setBotiga(Botiga botiga) { this.botiga = botiga; }

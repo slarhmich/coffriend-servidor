@@ -6,6 +6,9 @@ import com.brewingcode.coffriend_servidor.entities.Comanda;
 import com.brewingcode.coffriend_servidor.entities.LiniaComanda;
 import com.brewingcode.coffriend_servidor.repositories.ComandaRepository;
 import com.brewingcode.coffriend_servidor.repositories.LiniaComandaRepository;
+import com.brewingcode.coffriend_servidor.security.AuthorizationService;
+import com.brewingcode.coffriend_servidor.security.RoleEnum;
+import com.brewingcode.coffriend_servidor.service.GamificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,7 +46,14 @@ public class ComandaController {
     @Autowired
     private com.brewingcode.coffriend_servidor.repositories.ProducteRepository producteRepository;
 
-    // GET ALL
+    @Autowired
+    private AuthorizationService authorizationService;
+
+    @Autowired
+    private GamificationService gamificationService;
+
+    // get all comandes (of all shops)
+    @PreAuthorize("hasRole('admin')")
     @GetMapping
     public ResponseEntity<List<ComandaDTO>> getAll() {
         List<ComandaDTO> comandes = comandaRepository.findAll()
@@ -53,9 +63,41 @@ public class ComandaController {
         return ResponseEntity.ok(comandes);
     }
 
-    // GET BY USER (CLIENT)
+    // geta customer's comandes
     @GetMapping("/usuario/{idUsuari}")
-    public ResponseEntity<List<ComandaDTO>> getByUsuari(@PathVariable Integer idUsuari) {
+    public ResponseEntity<List<ComandaDTO>> getByUsuari(@PathVariable Integer idUsuari, Authentication auth) {
+      // if admin any user's comandes can be seen
+      if (authorizationService.hasRole(auth, RoleEnum.ADMIN)) {
+            List<ComandaDTO> comandes = comandaRepository.findByIdUsuari(idUsuari)
+                    .stream()
+                    .map(this::toDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(comandes);
+        }
+        
+        // staff can see a customer's comandes if they're from their shop
+        if (authorizationService.hasRole(auth, RoleEnum.STAFF)) {
+            Integer staffUserId = authorizationService.getCurrentUserId(auth);
+            var staffMember = usuariRepository.findById(staffUserId);
+            
+            if (staffMember.isEmpty() || staffMember.get().getBotiga() == null) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            
+            Integer staffBotigaId = staffMember.get().getBotiga().getId();
+            List<ComandaDTO> comandes = comandaRepository.findByIdUsuari(idUsuari)
+                    .stream()
+                    .filter(c -> c.getBotiga() != null && c.getBotiga().getId().equals(staffBotigaId))
+                    .map(this::toDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(comandes);
+        }
+        
+        // clients can only see their own comandes
+        if (!authorizationService.canManageUser(auth, idUsuari)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
         List<ComandaDTO> comandes = comandaRepository.findByIdUsuari(idUsuari)
                 .stream()
                 .map(this::toDTO)
@@ -63,29 +105,74 @@ public class ComandaController {
         return ResponseEntity.ok(comandes);
     }
 
-    // GET BY BOTIGA (WORKER)
+    // get all comandes by shop id
     @GetMapping("/botiga/{idBotiga}")
-    public ResponseEntity<List<ComandaDTO>> getByBotiga(@PathVariable Integer idBotiga) {
-        List<ComandaDTO> comandes = comandaRepository.findByIdBotiga(idBotiga)
-                .stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(comandes);
+    public ResponseEntity<List<ComandaDTO>> getByBotiga(@PathVariable Integer idBotiga, Authentication auth) {
+        // admin can see comandes from any botiga
+        if (authorizationService.hasRole(auth, RoleEnum.ADMIN)) {
+            List<ComandaDTO> comandes = comandaRepository.findByIdBotiga(idBotiga)
+                    .stream()
+                    .map(this::toDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(comandes);
+        }
+        
+        // staff can only see comandes from their own botiga
+        if (authorizationService.hasRole(auth, RoleEnum.STAFF)) {
+            Integer staffUserId = authorizationService.getCurrentUserId(auth);
+            var staffMember = usuariRepository.findById(staffUserId);
+            
+            if (staffMember.isEmpty() || staffMember.get().getBotiga() == null ||
+                !staffMember.get().getBotiga().getId().equals(idBotiga)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            
+            List<ComandaDTO> comandes = comandaRepository.findByIdBotiga(idBotiga)
+                    .stream()
+                    .map(this::toDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(comandes);
+        }
+        
+        // clients don't have access to botiga comandes
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
-    // GET BY ID
+    // get by id
     @GetMapping("/{id}")
-    public ResponseEntity<ComandaDTO> getById(@PathVariable Integer id) {
-        return comandaRepository.findById(id)
-                .map(c -> ResponseEntity.ok(toDTO(c)))
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<ComandaDTO> getById(@PathVariable Integer id, Authentication auth) {
+        return comandaRepository.findById(id).map(comanda -> {
+            // admin can see any comanda
+            if (authorizationService.hasRole(auth, RoleEnum.ADMIN)) {
+                return ResponseEntity.ok(toDTO(comanda));
+            }
+            
+            // staff can see comandes from their botiga
+            if (authorizationService.hasRole(auth, RoleEnum.STAFF)) {
+                Integer staffUserId = authorizationService.getCurrentUserId(auth);
+                var staffMember = usuariRepository.findById(staffUserId);
+                
+                if (staffMember.isPresent() && staffMember.get().getBotiga() != null &&
+                    staffMember.get().getBotiga().getId().equals(comanda.getBotiga().getId())) {
+                    return ResponseEntity.ok(toDTO(comanda));
+                }
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).<ComandaDTO>build();
+            }
+            
+            // clients can only see their own comandes
+            if (authorizationService.hasRole(auth, RoleEnum.CLIENT) &&
+                authorizationService.canManageUser(auth, comanda.getUsuari().getId())) {
+                return ResponseEntity.ok(toDTO(comanda));
+            }
+            
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).<ComandaDTO>build();
+        }).orElse(ResponseEntity.notFound().build());
     }
 
-    // CREATE (CLIENT)
-    @PreAuthorize("hasAuthority('ROLE_client')")
+    // create comanda
+    @PreAuthorize("hasRole('client')")
     @PostMapping
     public ResponseEntity<ComandaDTO> create(@RequestBody ComandaDTO dto, Authentication auth) {
-        // Auto-resolve user from JWT token
         Integer userId = Integer.parseInt(auth.getName());
         var usuari = usuariRepository.findById(userId);
         if (usuari.isEmpty()) {
@@ -111,32 +198,46 @@ public class ComandaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toDTO(saved));
     }
 
-    // UPDATE STATUS (WORKER or ADMIN)
-    @PreAuthorize("hasRole('admin') or hasRole('treballador')")
+    // update status
+    @PreAuthorize("hasRole('admin') or hasRole('staff')")
     @PutMapping("/{id}/estat/{estat}")
     public ResponseEntity<ComandaDTO> updateEstat(@PathVariable Integer id, @PathVariable String estat) {
         return comandaRepository.findById(id).map(comanda -> {
+            String oldEstat = comanda.getEstat();
             comanda.setEstat(estat);
             Comanda updated = comandaRepository.save(comanda);
+            
+            // check gamification when order complete
+            if ("completat".equals(estat) && !("completat".equals(oldEstat))) {
+                gamificationService.processOrderCompletion(updated);
+            }
+            
             return ResponseEntity.ok(toDTO(updated));
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // DELETE
+    // delete comanda by id
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id, Authentication auth) {
         return comandaRepository.findById(id).map(comanda -> {
-            boolean isClient = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_client"));
-            Integer callerId = (Integer) auth.getPrincipal();
-            if (isClient && (comanda.getUsuari() == null || !comanda.getUsuari().getId().equals(callerId))) {
-                 return ResponseEntity.status(HttpStatus.FORBIDDEN).<Void>build();
+            boolean isAdmin = authorizationService.hasRole(auth, RoleEnum.ADMIN);
+            boolean isOwner = authorizationService.canManageUser(auth,
+                    comanda.getUsuari() != null ? comanda.getUsuari().getId() : null);
+
+            if (!isAdmin && !isOwner) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).<Void>build();
             }
+
+            if (!isAdmin && !"pendent".equals(comanda.getEstat())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).<Void>build();
+            }
+
             comandaRepository.deleteById(id);
             return ResponseEntity.noContent().<Void>build();
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // ADD LINE (CLIENT)
+    // add line to comanda
     @PreAuthorize("hasRole('client')")
     @PostMapping("/{id}/linies")
     public ResponseEntity<LiniaComandaDTO> addLinea(@PathVariable Integer id, @RequestBody LiniaComandaDTO dto) {
@@ -155,7 +256,7 @@ public class ComandaController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // DELETE LINE (CLIENT)
+    // delete line from comanda
     @PreAuthorize("hasRole('client')")
     @DeleteMapping("/linies/{idComanda}/{idProducte}")
     public ResponseEntity<Void> deleteLinea(@PathVariable Integer idComanda, @PathVariable Integer idProducte) {
