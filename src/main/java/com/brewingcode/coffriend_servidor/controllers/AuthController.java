@@ -29,16 +29,34 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<com.brewingcode.coffriend_servidor.dto.AuthResponseDTO> login(@RequestBody LoginDTO dto) {
         return usuariRepository.findByEmail(dto.getEmail())
-                .filter(usuari -> passwordEncoder.matches(dto.getPassword(), usuari.getPassword()))
+                .filter(usuari -> isValidPassword(dto.getPassword(), usuari))
                 .map(usuari -> {
-                    UsuariDTO userDto = new UsuariDTO(usuari.getId(), usuari.getNom(), usuari.getEmail(), 
-                            usuari.getRol(), usuari.getNivell(), usuari.getPunts(), 
+                    UsuariDTO userDto = new UsuariDTO(usuari.getId(), usuari.getNom(), usuari.getEmail(),
+                            usuari.getRol(), usuari.getNivell(), usuari.getPunts(),
                             usuari.getBotiga() != null ? usuari.getBotiga().getId() : null);
-                    
+
                     String token = jwtService.generateToken(usuari.getId(), usuari.getRol());
                     return ResponseEntity.ok(new com.brewingcode.coffriend_servidor.dto.AuthResponseDTO(token, userDto));
                 })
                 .orElse(ResponseEntity.status(401).build());
+    }
+
+    private boolean isValidPassword(String rawPassword, com.brewingcode.coffriend_servidor.entities.Usuari usuari) {
+        if (rawPassword == null || usuari.getPassword() == null) {
+            return false;
+        }
+
+        if (passwordEncoder.matches(rawPassword, usuari.getPassword())) {
+            return true;
+        }
+
+        if (rawPassword.equals(usuari.getPassword())) {
+            usuari.setPassword(passwordEncoder.encode(rawPassword));
+            usuariRepository.save(usuari);
+            return true;
+        }
+
+        return false;
     }
 
     @PostMapping("/logout")
