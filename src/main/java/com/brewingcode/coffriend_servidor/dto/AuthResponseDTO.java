@@ -2,13 +2,13 @@ package com.brewingcode.coffriend_servidor.dto;
 
 public class AuthResponseDTO {
     private String token;
-    private UsuariDTO usuari;
+    private UsuariDTO user;
 
     public AuthResponseDTO() {}
 
-    public AuthResponseDTO(String token, UsuariDTO usuari) {
+    public AuthResponseDTO(String token, UsuariDTO user) {
         this.token = token;
-        this.usuari = usuari;
+        this.user = user;
     }
 
     public String getToken() {
@@ -19,11 +19,11 @@ public class AuthResponseDTO {
         this.token = token;
     }
 
-    public UsuariDTO getUsuari() {
-        return usuari;
+    public UsuariDTO getUser() {
+        return user;
     }
 
-    public void setUsuari(UsuariDTO usuari) {
-        this.usuari = usuari;
+    public void setUser(UsuariDTO user) {
+        this.user = user;
     }
 }
