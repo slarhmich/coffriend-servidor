@@ -22,9 +22,20 @@ public class JwtService {
     @Autowired
     private TokenBlacklistService tokenBlacklistService;
 
+    /**
+     * Generate a JWT token for the given user ID and role.
+     * 
+     * @param userId the user's ID
+     * @param role the user's role (e.g., "admin", "staff", "client")
+     * @return the JWT token
+     * @throws IllegalArgumentException if the role is not recognized
+     */
     public String generateToken(Integer userId, String role) {
+        // Validate role using RoleEnum
+        RoleEnum roleEnum = RoleEnum.fromDbValue(role);
+        
         Map<String, Object> claims = new HashMap<>();
-        claims.put("role", role);
+        claims.put("role", roleEnum.getDbValue());
         return createToken(claims, String.valueOf(userId));
     }
 
