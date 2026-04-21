@@ -424,3 +424,7 @@ FodyWeavers.xsd
 
 # OS
 .DS_Store
+
+# dbml
+*.dbml
+*.dbml.layout.json
