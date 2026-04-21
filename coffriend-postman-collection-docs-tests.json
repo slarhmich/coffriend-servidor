@@ -1,0 +1,416 @@
+{
+  "info": {
+    "_postman_id": "0b9cf6e0-2fdf-4e87-8c93-c3ddf2f1e84f",
+    "name": "Coffriend API - Docs & Validation",
+    "description": "Complete endpoint collection for documentation generation and API validation. Includes auth token handling, status checks, and variable capture for chained requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://special-barnacle-production.up.railway.app", "type": "string" },
+    { "key": "adminEmail", "value": "admin@example.com", "type": "string" },
+    { "key": "adminPassword", "value": "1234", "type": "string" },
+    { "key": "staffEmail", "value": "juan@example.com", "type": "string" },
+    { "key": "staffPassword", "value": "1234", "type": "string" },
+    { "key": "clientEmail", "value": "pedro@example.com", "type": "string" },
+    { "key": "clientPassword", "value": "1234", "type": "string" },
+    { "key": "adminToken", "value": "", "type": "string" },
+    { "key": "staffToken", "value": "", "type": "string" },
+    { "key": "clientToken", "value": "", "type": "string" },
+    { "key": "newClientToken", "value": "", "type": "string" },
+    { "key": "newUserId", "value": "", "type": "string" },
+    { "key": "clientUserId", "value": "", "type": "string" },
+    { "key": "staffUserId", "value": "", "type": "string" },
+    { "key": "botigaId", "value": "1", "type": "string" },
+    { "key": "producteId", "value": "1", "type": "string" },
+    { "key": "comandaId", "value": "", "type": "string" },
+    { "key": "comandaToDeleteId", "value": "", "type": "string" },
+    { "key": "insigniaId", "value": "", "type": "string" },
+    { "key": "triggerId", "value": "", "type": "string" },
+    { "key": "runSuffix", "value": "", "type": "string" },
+    { "key": "newClientEmail", "value": "", "type": "string" },
+    { "key": "newStaffEmail", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "00 Setup",
+      "item": [
+        {
+          "name": "Init dynamic emails",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const s = String(Date.now());",
+                  "const newClientEmail = 'testclient+' + s + '@example.com';",
+                  "const newStaffEmail = 'newstaff+' + s + '@example.com';",
+                  "pm.collectionVariables.set('runSuffix', s);",
+                  "pm.environment.set('runSuffix', s);",
+                  "pm.globals.set('runSuffix', s);",
+                  "pm.collectionVariables.set('newClientEmail', newClientEmail);",
+                  "pm.environment.set('newClientEmail', newClientEmail);",
+                  "pm.globals.set('newClientEmail', newClientEmail);",
+                  "pm.collectionVariables.set('newStaffEmail', newStaffEmail);",
+                  "pm.environment.set('newStaffEmail', newStaffEmail);",
+                  "pm.globals.set('newStaffEmail', newStaffEmail);",
+                  "pm.test('Dynamic variables generated', function () { pm.expect(newClientEmail).to.include('@example.com'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/productes"
+          }
+        },
+        {
+          "name": "Create initial admin user (idempotent)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 201 or 400', function () { pm.expect([201, 400]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"admin\",\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/usuaris"
+          }
+        },
+        {
+          "name": "Login admin and save token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const b = pm.response.json();",
+                  "const token = b.token || (b.body && b.body.token);",
+                  "pm.collectionVariables.set('adminToken', token || '');",
+                  "pm.collectionVariables.set('clientToken', token || '');",
+                  "pm.collectionVariables.set('staffToken', token || '');",
+                  "pm.collectionVariables.set('newClientToken', token || '');",
+                  "pm.environment.set('adminToken', token || '');",
+                  "pm.globals.set('adminToken', token || '');",
+                  "pm.test('admin token exists', function () { pm.expect(token).to.be.a('string').and.not.empty; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Seed demo data (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 or 400', function () { pm.expect([200, 400]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/system/seed"
+          }
+        },
+        {
+          "name": "Capture first botigaId (public)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const arr = pm.response.json();",
+                  "  if (Array.isArray(arr) && arr.length > 0 && arr[0].id != null) {",
+                  "    const id = String(arr[0].id);",
+                  "    pm.collectionVariables.set('botigaId', id);",
+                  "    pm.environment.set('botigaId', id);",
+                  "    pm.globals.set('botigaId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Status 200', function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/botigues"
+          }
+        },
+        {
+          "name": "Capture first producteId (public)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const arr = pm.response.json();",
+                  "  if (Array.isArray(arr) && arr.length > 0 && arr[0].id != null) {",
+                  "    const id = String(arr[0].id);",
+                  "    pm.collectionVariables.set('producteId', id);",
+                  "    pm.environment.set('producteId', id);",
+                  "    pm.globals.set('producteId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Status 200', function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/productes"
+          }
+        },
+        {
+          "name": "Capture first insigniaId (public)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const arr = pm.response.json();",
+                  "  if (Array.isArray(arr) && arr.length > 0 && arr[0].id != null) {",
+                  "    const id = String(arr[0].id);",
+                  "    pm.collectionVariables.set('insigniaId', id);",
+                  "    pm.environment.set('insigniaId', id);",
+                  "    pm.globals.set('insigniaId', id);",
+                  "  }",
+                  "}",
+                  "pm.test('Status 200', function () { pm.expect(pm.response.code).to.eql(200); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/insignies"
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 Auth",
+      "item": [
+        {
+          "name": "POST /api/auth/login",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });", "const b = pm.response.json();", "const token = b.token || (b.body && b.body.token);", "pm.collectionVariables.set('adminToken', token || '');", "pm.collectionVariables.set('clientToken', token || '');", "pm.collectionVariables.set('staffToken', token || '');", "pm.collectionVariables.set('newClientToken', token || '');"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}" }, "url": "{{baseUrl}}/api/auth/login" }
+        }
+      ]
+    },
+    {
+      "name": "02 Usuaris",
+      "item": [
+        {
+          "name": "POST /api/usuaris",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', function () { pm.response.to.have.status(201); });", "const b = pm.response.json();", "pm.collectionVariables.set('newUserId', String(b.id));", "pm.environment.set('newUserId', String(b.id));", "pm.globals.set('newUserId', String(b.id));"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"nom\": \"Test Client\",\n  \"email\": \"{{newClientEmail}}\",\n  \"password\": \"1234\"\n}" }, "url": "{{baseUrl}}/api/usuaris" }
+        },
+        {
+          "name": "GET /api/usuaris",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"] } }],
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/api/usuaris" }
+        },
+        {
+          "name": "GET /api/usuaris/{id}",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/api/usuaris/{{clientUserId}}" }
+        },
+        {
+          "name": "PUT /api/usuaris/{id}",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{clientToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"nom\": \"Pedro Updated\",\n  \"email\": \"{{clientEmail}}\"\n}" }, "url": "{{baseUrl}}/api/usuaris/{{clientUserId}}" }
+        },
+        {
+          "name": "DELETE /api/usuaris/{id}",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{newClientToken}}" }], "url": "{{baseUrl}}/api/usuaris/{{newUserId}}" }
+        }
+      ]
+    },
+    {
+      "name": "03 Botigues",
+      "item": [
+        { "name": "GET /api/botigues", "request": { "method": "GET", "url": "{{baseUrl}}/api/botigues" } },
+        { "name": "GET /api/botigues/{id}", "request": { "method": "GET", "url": "{{baseUrl}}/api/botigues/{{botigaId}}" } },
+        {
+          "name": "POST /api/botigues",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code===201){ const b=pm.response.json(); const id=String(b.id); pm.collectionVariables.set('botigaId', id); pm.environment.set('botigaId', id); pm.globals.set('botigaId', id); }", "pm.test('Status 201', function(){ pm.expect(pm.response.code).to.eql(201); });"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"nom\": \"Nova Botiga Test\",\n  \"adreca\": \"Carrer Test 99\",\n  \"horari\": \"09:00-18:00\"\n}" }, "url": "{{baseUrl}}/api/botigues" }
+        },
+        {
+          "name": "PUT /api/botigues/{id}",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"nom\": \"Brewing Coffee\",\n  \"adreca\": \"Carrer de l'Exemple, 1, Barcelona\",\n  \"horari\": \"07:00-22:00\"\n}" }, "url": "{{baseUrl}}/api/botigues/{{botigaId}}" }
+        }
+      ]
+    },
+    {
+      "name": "04 Productes",
+      "item": [
+        { "name": "GET /api/productes", "request": { "method": "GET", "url": "{{baseUrl}}/api/productes" } },
+        { "name": "GET /api/productes/botiga/{idBotiga}", "request": { "method": "GET", "url": "{{baseUrl}}/api/productes/botiga/{{botigaId}}" } },
+        { "name": "GET /api/productes/{id}", "request": { "method": "GET", "url": "{{baseUrl}}/api/productes/{{producteId}}" } },
+        {
+          "name": "POST /api/productes",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', function(){ pm.response.to.have.status(201); });", "const b=pm.response.json(); const id=String(b.id); pm.collectionVariables.set('producteId', id); pm.environment.set('producteId', id); pm.globals.set('producteId', id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"nom\": \"Flat White Test\",\n  \"preu\": 3.75,\n  \"categoria\": \"Café\",\n  \"idBotiga\": {{botigaId}}\n}" }, "url": "{{baseUrl}}/api/productes" }
+        },
+        {
+          "name": "PUT /api/productes/{id}",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"nom\": \"Flat White Updated\",\n  \"preu\": 4.25,\n  \"categoria\": \"Café\",\n  \"idBotiga\": {{botigaId}}\n}" }, "url": "{{baseUrl}}/api/productes/{{producteId}}" }
+        },
+        {
+          "name": "DELETE /api/productes/{id}",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/api/productes/{{producteId}}" }
+        }
+      ]
+    },
+    {
+      "name": "05 Comandes",
+      "item": [
+        { "name": "GET /api/comandes", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/api/comandes" } },
+        { "name": "GET /api/comandes/usuario/{idUsuari}", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{clientToken}}" }], "url": "{{baseUrl}}/api/comandes/usuario/{{clientUserId}}" } },
+        { "name": "GET /api/comandes/botiga/{idBotiga}", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }], "url": "{{baseUrl}}/api/comandes/botiga/{{botigaId}}" } },
+        { "name": "GET /api/comandes/{id}", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{clientToken}}" }], "url": "{{baseUrl}}/api/comandes/{{comandaId}}" } },
+        {
+          "name": "POST /api/comandes",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', function(){ pm.response.to.have.status(201); });", "const b=pm.response.json(); const id=String(b.id); pm.collectionVariables.set('comandaId', id); pm.environment.set('comandaId', id); pm.globals.set('comandaId', id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{clientToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"idBotiga\": {{botigaId}},\n  \"tipus\": \"local\",\n  \"linies\": [\n    {\n      \"idProducte\": {{producteId}},\n      \"quantitat\": 1,\n      \"preuUnitari\": 2.5\n    }\n  ]\n}" }, "url": "{{baseUrl}}/api/comandes" }
+        },
+        {
+          "name": "PUT /api/comandes/{id}/estat/{estat}",
+          "request": { "method": "PUT", "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }], "url": "{{baseUrl}}/api/comandes/{{comandaId}}/estat/completat" }
+        },
+        {
+          "name": "DELETE /api/comandes/{id}",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{clientToken}}" }], "url": "{{baseUrl}}/api/comandes/{{comandaToDeleteId}}" }
+        },
+        {
+          "name": "POST /api/comandes/{id}/linies",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{clientToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"idProducte\": {{producteId}},\n  \"quantitat\": 2,\n  \"preuUnitari\": 2.5\n}" }, "url": "{{baseUrl}}/api/comandes/{{comandaId}}/linies" }
+        },
+        {
+          "name": "DELETE /api/comandes/linies/{idComanda}/{idProducte}",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{clientToken}}" }], "url": "{{baseUrl}}/api/comandes/linies/{{comandaId}}/{{producteId}}" }
+        }
+      ]
+    },
+    {
+      "name": "06 Insignies",
+      "item": [
+        { "name": "GET /api/insignies", "request": { "method": "GET", "url": "{{baseUrl}}/api/insignies" } },
+        { "name": "GET /api/insignies/{id}", "request": { "method": "GET", "url": "{{baseUrl}}/api/insignies/{{insigniaId}}" } },
+        {
+          "name": "POST /api/insignies",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', function(){ pm.response.to.have.status(201); });", "const b=pm.response.json(); const id=String(b.id); pm.collectionVariables.set('insigniaId', id); pm.environment.set('insigniaId', id); pm.globals.set('insigniaId', id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"nom\": \"Test Badge\",\n  \"descripcio\": \"Insignia de proves\",\n  \"imatgeUrl\": \"https://example.com/badge-test.png\"\n}" }, "url": "{{baseUrl}}/api/insignies" }
+        },
+        {
+          "name": "PUT /api/insignies/{id}",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"nom\": \"Test Badge Updated\",\n  \"descripcio\": \"Descripcio actualitzada\",\n  \"imatgeUrl\": \"https://example.com/badge-updated.png\"\n}" }, "url": "{{baseUrl}}/api/insignies/{{insigniaId}}" }
+        },
+        {
+          "name": "DELETE /api/insignies/{id}",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/api/insignies/{{insigniaId}}" }
+        }
+      ]
+    },
+    {
+      "name": "07 Gamificacion",
+      "item": [
+        { "name": "GET /api/gamificacion/levels", "request": { "method": "GET", "url": "{{baseUrl}}/api/gamificacion/levels" } },
+        {
+          "name": "POST /api/gamificacion/assignBadge",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/gamificacion/assignBadge?usuariId={{clientUserId}}&insigniaId={{insigniaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "gamificacion", "assignBadge"],
+              "query": [
+                { "key": "usuariId", "value": "{{clientUserId}}" },
+                { "key": "insigniaId", "value": "{{insigniaId}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "PUT /api/gamificacion/updateLevelAndPoints/{idUsuari}",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"nivell\": 3,\n  \"punts\": 300\n}" }, "url": "{{baseUrl}}/api/gamificacion/updateLevelAndPoints/{{clientUserId}}" }
+        }
+      ]
+    },
+    {
+      "name": "08 Badge Triggers",
+      "item": [
+        { "name": "GET /api/badges/{badgeId}/triggers", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/api/badges/{{insigniaId}}/triggers" } },
+        {
+          "name": "POST /api/badges/{badgeId}/triggers",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 201', function(){ pm.response.to.have.status(201); });", "const b=pm.response.json(); const id=String(b.id); pm.collectionVariables.set('triggerId', id); pm.environment.set('triggerId', id); pm.globals.set('triggerId', id);"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"triggerType\": \"TIME_OF_DAY\",\n  \"hourStart\": 6,\n  \"hourEnd\": 8\n}" }, "url": "{{baseUrl}}/api/badges/{{insigniaId}}/triggers" }
+        },
+        {
+          "name": "PUT /api/badges/{badgeId}/triggers/{triggerId}",
+          "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{adminToken}}" }], "body": { "mode": "raw", "raw": "{\n  \"isActive\": false\n}" }, "url": "{{baseUrl}}/api/badges/{{insigniaId}}/triggers/{{triggerId}}" }
+        },
+        {
+          "name": "DELETE /api/badges/{badgeId}/triggers/{triggerId}",
+          "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/api/badges/{{insigniaId}}/triggers/{{triggerId}}" }
+        }
+      ]
+    },
+    {
+      "name": "09 System",
+      "item": [
+        { "name": "POST /api/system/seed", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/api/system/seed" } },
+        { "name": "DELETE /api/system/resetDemo", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/api/system/resetDemo" } },
+        { "name": "DELETE /api/system/resetAll", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }], "url": "{{baseUrl}}/api/system/resetAll" } }
+      ]
+    },
+    {
+      "name": "10 Auth Cleanup",
+      "item": [
+        {
+          "name": "POST /api/auth/logout",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Status 200 or 400', function () { pm.expect([200, 400]).to.include(pm.response.code); });"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{adminToken}}\"\n}" }, "url": "{{baseUrl}}/api/auth/logout" }
+        }
+      ]
+    }
+  ]
+}
