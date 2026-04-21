@@ -15,7 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -172,6 +174,7 @@ public class ComandaController {
     // create comanda
     @PreAuthorize("hasRole('client')")
     @PostMapping
+    @Transactional
     public ResponseEntity<ComandaDTO> create(@RequestBody ComandaDTO dto, Authentication auth) {
         Integer userId = Integer.parseInt(auth.getName());
         var usuari = usuariRepository.findById(userId);
@@ -186,6 +189,30 @@ public class ComandaController {
         if (botiga.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
+
+        if (dto.getLinies() == null || dto.getLinies().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        List<LiniaComanda> liniesToCreate = new ArrayList<>();
+        for (LiniaComandaDTO liniaDto : dto.getLinies()) {
+            if (liniaDto.getIdProducte() == null || liniaDto.getQuantitat() == null ||
+                liniaDto.getQuantitat() <= 0 || liniaDto.getPreuUnitari() == null ||
+                liniaDto.getPreuUnitari() <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            var producte = producteRepository.findById(liniaDto.getIdProducte());
+            if (producte.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            LiniaComanda linia = new LiniaComanda();
+            linia.setProducte(producte.get());
+            linia.setQuantitat(liniaDto.getQuantitat());
+            linia.setPreuUnitari(java.math.BigDecimal.valueOf(liniaDto.getPreuUnitari()));
+            liniesToCreate.add(linia);
+        }
         
         Comanda comanda = new Comanda();
         comanda.setDataHora(LocalDateTime.now());
@@ -195,6 +222,12 @@ public class ComandaController {
         comanda.setBotiga(botiga.get());
         
         Comanda saved = comandaRepository.save(comanda);
+
+        for (LiniaComanda linia : liniesToCreate) {
+            linia.setComanda(saved);
+            liniaComandaRepository.save(linia);
+        }
+
         return ResponseEntity.status(HttpStatus.CREATED).body(toDTO(saved));
     }
 
@@ -259,8 +292,25 @@ public class ComandaController {
     // delete line from comanda
     @PreAuthorize("hasRole('client')")
     @DeleteMapping("/linies/{idComanda}/{idProducte}")
+    @Transactional
     public ResponseEntity<Void> deleteLinea(@PathVariable Integer idComanda, @PathVariable Integer idProducte) {
-        liniaComandaRepository.deleteById(new com.brewingcode.coffriend_servidor.entities.LiniaComandaId(idComanda, idProducte));
+        if (!comandaRepository.existsById(idComanda)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        com.brewingcode.coffriend_servidor.entities.LiniaComandaId liniaId =
+                new com.brewingcode.coffriend_servidor.entities.LiniaComandaId(idComanda, idProducte);
+
+        if (!liniaComandaRepository.existsById(liniaId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        liniaComandaRepository.deleteById(liniaId);
+
+        if (liniaComandaRepository.findByComandaId(idComanda).isEmpty()) {
+            comandaRepository.deleteById(idComanda);
+        }
+
         return ResponseEntity.noContent().build();
     }
 
