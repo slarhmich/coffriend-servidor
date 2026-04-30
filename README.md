@@ -11,7 +11,8 @@ Per crear un usuari amb rol treballador s'ha de especificar afegint com a rol "s
 
 > [!NOTE]
 > ADMIN:
-> L'instancia publicada ja té usuari admin amb contrasenya "1234" i email "admin@example.com".
+> L'instancia publicada ja té usuari admin amb contrasenya "1234", email "admin@example.com".
+> Si esborres admin pots tornar a crear un compte administrador (amb les mateixes credencials) per continuar amb les proves.
 
 ```json
 Request:
