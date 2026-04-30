@@ -1,5 +1,6 @@
 package com.brewingcode.coffriend_servidor.controllers;
 
+import com.brewingcode.coffriend_servidor.dto.ChangePasswordDTO;
 import com.brewingcode.coffriend_servidor.dto.EarnedInsigniaDTO;
 import com.brewingcode.coffriend_servidor.dto.UsuariDTO;
 import com.brewingcode.coffriend_servidor.dto.UsuariPublicDTO;
@@ -133,8 +134,39 @@ public class UsuariController {
             Usuari updated = usuariRepository.save(usuari);
             return ResponseEntity.ok(toDTO(updated));
         }).orElse(ResponseEntity.notFound().build());
-    }
+      }
 
+      // CHANGE PASSWORD
+      @PostMapping("/{id}/password")
+      public ResponseEntity<Void> changePassword(@PathVariable Integer id, @RequestBody ChangePasswordDTO dto, org.springframework.security.core.Authentication auth) {
+          if (!authorizationService.isAuthenticated(auth)) {
+              return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+          }
+
+          return usuariRepository.findById(id).map(usuari -> {
+              boolean isAdmin = authorizationService.hasRole(auth, RoleEnum.ADMIN);
+              boolean isSelf = authorizationService.canManageUser(auth, id);
+
+              if (!isAdmin && !isSelf) {
+                  return ResponseEntity.status(HttpStatus.FORBIDDEN).<Void>build();
+              }
+
+              if (!isAdmin) {
+                  if (dto.getOldPassword() == null || !passwordEncoder.matches(dto.getOldPassword(), usuari.getPassword())) {
+                      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).<Void>build();
+                  }
+              }
+
+              if (dto.getNewPassword() == null || dto.getNewPassword().isBlank()) {
+                  return ResponseEntity.badRequest().<Void>build();
+              }
+
+              usuari.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+              usuariRepository.save(usuari);
+              return ResponseEntity.noContent().<Void>build();
+          }).orElse(ResponseEntity.notFound().build());
+      }
+    
     // DELETE
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id, org.springframework.security.core.Authentication auth) {
