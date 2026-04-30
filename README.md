@@ -250,6 +250,25 @@ Response:
 }
 ```
 
+### POST /api/usuaris/{id}/password
+Descripció: Canviar la contrasenya d'un usuari. Els clients i treballadors han de proporcionar la contrasenya antiga per verificar la identitat. Els administradors poden canviar qualsevol contrasenya sense necessitat de proporcionar-la.
+
+> [!NOTE] Els administradors no necessiten proporcionar la contrasenya antiga.
+
+```json
+Header:
+  Authorization: Bearer [token]
+
+Request:
+{
+  "oldPassword": "1234", // obligatori per a client i staff
+  "newPassword": "novaContrasenya"
+}
+
+Response:
+204 No Content
+```
+
 ### DELETE /api/usuaris/[id]
 Descripció: esborra l'usuari amb el seu id.
 
