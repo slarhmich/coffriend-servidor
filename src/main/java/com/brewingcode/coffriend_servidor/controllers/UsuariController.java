@@ -9,6 +9,7 @@ import com.brewingcode.coffriend_servidor.repositories.UsuariInsigniaRepository;
 import com.brewingcode.coffriend_servidor.repositories.UsuariRepository;
 import com.brewingcode.coffriend_servidor.security.AuthorizationService;
 import com.brewingcode.coffriend_servidor.security.RoleEnum;
+import com.brewingcode.coffriend_servidor.service.DataCleanupService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +37,9 @@ public class UsuariController {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private DataCleanupService dataCleanupService;
 
     // CREATE
     @PostMapping
@@ -174,8 +178,12 @@ public class UsuariController {
             boolean isAdmin = authorizationService.hasRole(auth, RoleEnum.ADMIN);
             boolean isClient = authorizationService.hasRole(auth, RoleEnum.CLIENT);
 
-            // only admin can delete
+            // only admin can delete all
             if (isAdmin) {
+                // if the user to delete is admin, perform resetAll before deleting
+                if (RoleEnum.ADMIN.getDbValue().equals(usuari.getRol())) {
+                    dataCleanupService.deleteAllData();
+                }
             } else if (isClient) {
                  if (!authorizationService.canManageUser(auth, id)) {
                      return ResponseEntity.status(HttpStatus.FORBIDDEN).<Void>build();
