@@ -17,14 +17,14 @@ import com.brewingcode.coffriend_servidor.service.DataCleanupService;
 @CrossOrigin(origins = "*")
 public class SystemController {
     @Autowired private DemoDataService demoDataService;
-    @Autowired private DataCleanupService demoDataCleanupService;
+    @Autowired private DataCleanupService dataCleanupService;
 
     // delete all demo data
     @PreAuthorize("hasRole('admin')")
     @DeleteMapping("/resetDemo")
     public ResponseEntity<String> resetDemoData() {
         try {
-            demoDataCleanupService.deleteDemoDataOnly();
+            dataCleanupService.deleteDemoDataOnly();
             return ResponseEntity.ok("Demo data removed.");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error resetting demo data: " + e.getMessage());
@@ -36,7 +36,7 @@ public class SystemController {
     @DeleteMapping("/resetAll")
     public ResponseEntity<String> resetAllDatabase() {
         try {
-            demoDataCleanupService.deleteAllData();
+            dataCleanupService.deleteAllData();
             return ResponseEntity.ok("All data removed.");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error wiping database: " + e.getMessage());
